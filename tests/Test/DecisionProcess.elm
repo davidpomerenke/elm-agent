@@ -101,25 +101,6 @@ optimalSixCellsPolicy =
         )
 
 
-findsOptimalPolicy : Test
-findsOptimalPolicy =
-    --is not stacksafe
-    test "optimal policy is correct" <|
-        \_ ->
-            let
-                (Policy optimalPolicy_) =
-                    optimalPolicy sixCells |> Maybe.withDefault (Policy (\_ _ -> Nothing))
-            in
-            List.map (\state -> optimalPolicy_ Nothing state) sixCells.states
-                |> Expect.equal
-                    (let
-                        (Policy optimalSixCellsPolicy_) =
-                            optimalSixCellsPolicy
-                     in
-                     List.map (\state -> optimalSixCellsPolicy_ Nothing state) sixCells.states
-                    )
-
-
 exercise1 : Test
 exercise1 =
     describe "exercise 1" <|
@@ -132,6 +113,8 @@ exercise1 =
 
 
 
+-- EXERCISE 2
+-- BONUS EXERCISE 1
 -- GENERAL TESTS
 
 
@@ -170,6 +153,22 @@ toSequence =
                             , ( "s4", "a4", "s5" )
                             ]
                         )
+        , test "value iteration" <|
+            \_ ->
+                let
+                    (Policy optimalPolicy) =
+                        valueIteration (Utility 0.1) sixCells
+
+                    successors =
+                        List.map (\state -> optimalPolicy Nothing state) sixCells.states
+
+                    (Policy optimalPolicy_) =
+                        optimalSixCellsPolicy
+
+                    successors_ =
+                        List.map (\state -> optimalPolicy_ Nothing state) sixCells.states
+                in
+                successors |> Expect.equal successors_
         ]
 
 

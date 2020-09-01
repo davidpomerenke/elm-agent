@@ -2,15 +2,15 @@ module DecisionProcess exposing
     ( DecisionProcess, Probability(..), Utility(..), Discount(..)
     , Sequence, History, historyToSequence, Future, futureToSequence
     , expectedReward, utilityGivenFuture
-    , Policy(..), ahistoricPolicySpace, utilityGivenPolicy, optimalPolicy
+    , Policy(..), ahistoricPolicySpace, utilityGivenPolicy
+    , valueIteration, policyIteration, optimalPolicy
     )
 
-{-| Markov Decision Processes
+{-| Markov Decision Processes.
 
-The _Markov property_ needs to be fulfilled:
+The _Markov property_ needs to be fulfilled. This means: All relevant information about the environment needs to be encapsulated in the single current state of the environment.
 
-  - All relevant information about the environment needs to be encapsulated in the single current state of the environment.
-  - For example, if we try to model a soccer match such that a state is an image of the soccer field, the Markov property will not be fulfilled: We do not know about the speed of objects, but that is relevant information. We could change our model and include speed information in the state, or we could use two pictures for one state (but then, acceleration might still be missing relevant information).
+> For example: If we try to model a soccer match such that a state is an image of the soccer field, the Markov property will not be fulfilled: We do not know about the speed of objects, but that is relevant information. We could change our model and include speed information in the state, or we could use two pictures for one state (but then, acceleration might still be missing relevant information).
 
 
 # Markov Decision Process
@@ -30,12 +30,18 @@ The _Markov property_ needs to be fulfilled:
 
 # Policies
 
-@docs Policy, ahistoricPolicySpace, utilityGivenPolicy, optimalPolicy
+@docs Policy, ahistoricPolicySpace, utilityGivenPolicy
+
+
+# Algorithms
+
+@docs valueIteration, policyIteration, optimalPolicy
 
 -}
 
 import List
 import List.Extra as List
+import Maybe.Extra as Maybe
 
 
 
@@ -175,24 +181,6 @@ argMax f =
         >> Maybe.map Tuple.first
 
 
-{-| Helper function, currently unused.
--}
-bestActionBetween : state -> state -> DecisionProcess state action -> Maybe action
-bestActionBetween state1 state2 decisionProcess =
-    decisionProcess.actions state1
-        |> argMax
-            (\action ->
-                let
-                    (Utility u) =
-                        decisionProcess.reward state1 action state2
-
-                    (Probability p) =
-                        decisionProcess.transition state1 action state2
-                in
-                u * p
-            )
-
-
 {-| Sums up a list of utilities.
 -}
 sumUtility : List Utility -> Utility
@@ -304,7 +292,99 @@ paretoOptimum listOfLists =
         listOfLists
 
 
-{-| Optimal policy. Very inefficient and not stacksafe, use value iteration instead.
+
+-- LECTURE 2
+
+
+{-| Value iteration algorithm. Approximates the optimal policy of a decision process. The algorithm stops iterating once the highest utility improvement for any state has dropped below the first parameter `acceptableDelta` (also known as ϵ).
+
+⚠️ has bugs, not passing the test ⚠️
+
+-}
+valueIteration : Utility -> DecisionProcess state action -> Policy state action
+valueIteration (Utility acceptableDelta) decisionProcess =
+    let
+        (Discount gamma) =
+            decisionProcess.discount
+
+        valueIteration_ : List ( state, action, Utility ) -> Utility -> Policy state action
+        valueIteration_ values (Utility delta) =
+            let
+                updatedValues =
+                    decisionProcess.states
+                        |> List.map
+                            (\state1 ->
+                                let
+                                    optimalActionAndUtility =
+                                        decisionProcess.actions state1
+                                            |> List.map
+                                                (\action ->
+                                                    let
+                                                        (Utility e) =
+                                                            expectedReward state1 action decisionProcess
+
+                                                        (Utility futureUtility) =
+                                                            decisionProcess.states
+                                                                |> List.map
+                                                                    (\state2 ->
+                                                                        let
+                                                                            (Probability p) =
+                                                                                decisionProcess.transition state1 action state2
+
+                                                                            (Utility u) =
+                                                                                values
+                                                                                    |> List.find (\( state, _, _ ) -> state == state2)
+                                                                                    |> Maybe.map (\( _, _, u_ ) -> u_)
+                                                                                    |> Maybe.withDefault (Utility 0)
+                                                                        in
+                                                                        Utility (p * u)
+                                                                    )
+                                                                |> sumUtility
+                                                    in
+                                                    ( action
+                                                    , Utility
+                                                        (e
+                                                            + gamma
+                                                            * futureUtility
+                                                        )
+                                                    )
+                                                )
+                                            |> argMax (\( _, Utility u ) -> u)
+                                in
+                                Maybe.map (\( action, utility ) -> ( state1, action, utility )) optimalActionAndUtility
+                            )
+                        |> Maybe.values
+
+                updatedDelta =
+                    List.map2
+                        (\( _, _, Utility u1 ) ( _, _, Utility u2 ) -> Utility (u2 - u1))
+                        values
+                        (Debug.log "values" updatedValues)
+                        |> argMax (\(Utility u) -> u)
+                        |> Maybe.withDefault (Utility 0)
+            in
+            if delta < acceptableDelta then
+                Policy
+                    (\_ state ->
+                        updatedValues
+                            |> List.find (\( state_, _, _ ) -> state_ == state)
+                            |> Maybe.map (\( _, action, _ ) -> action)
+                    )
+
+            else
+                valueIteration_ updatedValues updatedDelta
+    in
+    valueIteration_ [] (Utility 0)
+
+
+{-| Policy iteration algorithm. Determines the optimal policy for a decision process. More exact but less efficient than `valueIteration`.
+-}
+policyIteration : DecisionProcess state action -> Policy state action
+policyIteration =
+    Debug.todo ""
+
+
+{-| Optimal policy. Very inefficient and not stacksafe, use `valueIteration` or `policyIteration` instead.
 -}
 optimalPolicy : DecisionProcess state action -> Maybe (Policy state action)
 optimalPolicy decisionProcess =
@@ -325,7 +405,3 @@ optimalPolicy decisionProcess =
             )
         |> paretoOptimum
         |> Maybe.map Tuple.first
-
-
-
--- LECTURE 2

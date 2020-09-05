@@ -1,12 +1,10 @@
-[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/davidpomerenke/elm-agent)
-
 # elm-agent 🤖💭
+
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/davidpomerenke/elm-agent)
 
 Code lecture notes for _Foundations of Agents_ at the Uni Maastricht, winter semester 2020/21.
 
 ## [Documentation 📈](https://elm-doc-preview.netlify.app/?repo=davidpomerenke/elm-agent&version=main)
-
-## [<a href="https://glitch.com/edit/?utm_content=project_elm-agent&utm_source=view_source&utm_medium=button&utm_campaign=glitchButton#!/elm-agent">  <img src="https://cdn.glitch.com/2bdfb3f8-05ef-4035-a06e-2043962a3a13%2Fview-source%402x.png?1513093958802" alt="view source" height="33"></a>]()
 
 ## What's Elm? 😮
 

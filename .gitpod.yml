@@ -1,5 +1,2 @@
-image:
-  file: .gitpod.Dockerfile
-
 tasks:
-  - init: npm install
+  - init: npm install --global elm elm-format elm-test

@@ -6,11 +6,11 @@ module DecisionProcess exposing
     , valueIteration, policyIteration, optimalPolicy
     )
 
-{-| Markov Decision Processes.
+{-| Markov Decision Process.
 
 The _Markov property_ needs to be fulfilled. This means: All relevant information about the environment needs to be encapsulated in the single current state of the environment.
 
-> For example: If we try to model a soccer match such that a state is an image of the soccer field, the Markov property will not be fulfilled: We do not know about the speed of objects, but that is relevant information. We could change our model and include speed information in the state, or we could use two pictures for one state (but then, acceleration might still be missing relevant information).
+> For example: If we try to model a soccer match such that a state is an image of the soccer field, the Markov property will not be fulfilled: We do not know about the speed of objects, but that is relevant information. We could change our model and include speed information in the state, or we could use two pictures for one state (but then, acceleration might still be some missing relevant information).
 
 
 # Markov Decision Process
@@ -296,77 +296,99 @@ paretoOptimum listOfLists =
 -- LECTURE 2
 
 
-{-| Value iteration algorithm. Approximates the optimal policy of a decision process. The algorithm stops iterating once the highest utility improvement for any state has dropped below the first parameter `acceptableDelta` (also known as ϵ).
+{-| Utility of an action in a state, given some previously approximated utility values of all states. This is part of the Bellman-update (`updateValues`).
+-}
+utilityGivenValues :
+    state
+    -> action
+    -> List ( state, action, Utility )
+    -> DecisionProcess state action
+    -> Utility
+utilityGivenValues state action values decisionProcess =
+    decisionProcess.states
+        |> List.map
+            (\state2 ->
+                let
+                    (Probability p) =
+                        decisionProcess.transition state action state2
 
-⚠️ has bugs, not passing the test ⚠️
+                    (Utility u) =
+                        values
+                            |> List.find (\( state_, _, _ ) -> state_ == state2)
+                            |> Maybe.map (\( _, _, u_ ) -> u_)
+                            |> Maybe.withDefault (Utility 0)
+                in
+                Utility (p * u)
+            )
+        |> sumUtility
 
+
+{-| Perform a Bellman-update on the values. This is an iteration step in the `valueIteration` algorithm.
+-}
+updateValues :
+    List ( state, action, Utility )
+    -> DecisionProcess state action
+    -> List ( state, action, Utility )
+updateValues values decisionProcess =
+    decisionProcess.states
+        |> List.map
+            (\state ->
+                let
+                    optimalActionAndUtility =
+                        decisionProcess.actions state
+                            |> List.map
+                                (\action ->
+                                    let
+                                        (Utility e) =
+                                            expectedReward state action decisionProcess
+
+                                        (Discount gamma) =
+                                            decisionProcess.discount
+
+                                        (Utility futureUtility_) =
+                                            utilityGivenValues state action values decisionProcess
+                                    in
+                                    ( action
+                                    , Utility
+                                        (e
+                                            + gamma
+                                            * futureUtility_
+                                        )
+                                    )
+                                )
+                            |> argMax (\( _, Utility u ) -> u)
+                in
+                Maybe.map (\( action, utility ) -> ( state, action, utility )) optimalActionAndUtility
+            )
+        |> Maybe.values
+
+
+{-| Value iteration algorithm. Approximates the optimal policy of a decision process. The algorithm stops iterating once the highest utility improvement for any state has dropped below a specified utility difference epsilon.
 -}
 valueIteration : Utility -> DecisionProcess state action -> Policy state action
-valueIteration (Utility acceptableDelta) decisionProcess =
+valueIteration (Utility epsilon) decisionProcess =
     let
-        (Discount gamma) =
-            decisionProcess.discount
-
-        valueIteration_ : List ( state, action, Utility ) -> Utility -> Bool -> Policy state action
-        valueIteration_ values (Utility delta) justStarted =
+        iterate : Maybe (List ( state, action, Utility )) -> Policy state action
+        iterate values =
             let
                 updatedValues =
-                    decisionProcess.states
-                        |> List.map
-                            (\state1 ->
-                                let
-                                    optimalActionAndUtility =
-                                        decisionProcess.actions state1
-                                            |> List.map
-                                                (\action ->
-                                                    let
-                                                        (Utility e) =
-                                                            expectedReward state1 action decisionProcess
+                    updateValues (Maybe.withDefault [] values) decisionProcess
 
-                                                        (Utility futureUtility) =
-                                                            decisionProcess.states
-                                                                |> List.map
-                                                                    (\state2 ->
-                                                                        let
-                                                                            (Probability p) =
-                                                                                decisionProcess.transition state1 action state2
-
-                                                                            (Utility u) =
-                                                                                values
-                                                                                    |> List.find (\( state, _, _ ) -> state == state2)
-                                                                                    |> Maybe.map (\( _, _, u_ ) -> u_)
-                                                                                    |> Maybe.withDefault (Utility 0)
-                                                                        in
-                                                                        Utility (p * u)
-                                                                    )
-                                                                |> sumUtility
-                                                    in
-                                                    ( action
-                                                    , Utility
-                                                        (e
-                                                            + gamma
-                                                            * futureUtility
-                                                        )
-                                                    )
-                                                )
-                                            |> argMax (\( _, Utility u ) -> u)
-                                in
-                                Maybe.map (\( action, utility ) -> ( state1, action, utility )) optimalActionAndUtility
+                stop =
+                    values
+                        |> Maybe.map
+                            (\values_ ->
+                                List.map2
+                                    (\( _, _, Utility u1 ) ( _, _, Utility u2 ) -> u2 - u1)
+                                    values_
+                                    updatedValues
+                                    |> argMax identity
+                                    |> Maybe.map ((>) epsilon)
                             )
-                        |> Maybe.values
-
-                updatedDelta =
-                    List.map2
-                        (\( _, _, Utility u1 ) ( _, _, Utility u2 ) -> Utility (u2 - u1))
-                        values
-                        (Debug.log "values" updatedValues)
-                        |> argMax (\(Utility u) -> u)
-                        |> Maybe.withDefault (Utility 0)
-
-                (Utility deltaUtility) =
-                    updatedDelta
+                        |> Maybe.join
+                        |> Maybe.withDefault False
             in
-            if Debug.log "updatedDelta" deltaUtility < acceptableDelta && not justStarted then
+            if stop then
                 Policy
                     (\_ state ->
                         updatedValues
@@ -375,9 +397,9 @@ valueIteration (Utility acceptableDelta) decisionProcess =
                     )
 
             else
-                valueIteration_ updatedValues updatedDelta False
+                iterate (Just updatedValues)
     in
-    valueIteration_ [] (Utility 0) True
+    iterate Nothing
 
 
 {-| Policy iteration algorithm. Determines the optimal policy for a decision process. More exact but less efficient than `valueIteration`.

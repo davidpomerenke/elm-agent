@@ -9,7 +9,7 @@ import Test exposing (Test, describe, test)
 
 
 
--- Exercise 1
+-- Lecture Exercise 1
 
 
 type Direction
@@ -94,7 +94,7 @@ optimalSixCellsPolicy =
             , ( ( 1, 0 ), East )
             , ( ( 0, 1 ), East )
             , ( ( 1, 1 ), North )
-            , ( ( 2, 1 ), North )
+            , ( ( 2, 1 ), West )
             ]
                 |> Dict.fromList
                 |> Dict.get state
@@ -159,16 +159,16 @@ toSequence =
                     (Policy optimalPolicy) =
                         valueIteration (Utility 0.1) sixCells
 
-                    successors =
+                    calculatedSuccessors =
                         List.map (\state -> optimalPolicy Nothing state) sixCells.states
 
                     (Policy optimalPolicy_) =
                         optimalSixCellsPolicy
 
-                    successors_ =
+                    expectedSuccessors =
                         List.map (\state -> optimalPolicy_ Nothing state) sixCells.states
                 in
-                successors |> Expect.equal successors_
+                calculatedSuccessors |> Expect.equal expectedSuccessors
         ]
 
 

@@ -307,8 +307,8 @@ valueIteration (Utility acceptableDelta) decisionProcess =
         (Discount gamma) =
             decisionProcess.discount
 
-        valueIteration_ : List ( state, action, Utility ) -> Utility -> Policy state action
-        valueIteration_ values (Utility delta) =
+        valueIteration_ : List ( state, action, Utility ) -> Utility -> Bool -> Policy state action
+        valueIteration_ values (Utility delta) justStarted =
             let
                 updatedValues =
                     decisionProcess.states
@@ -362,8 +362,11 @@ valueIteration (Utility acceptableDelta) decisionProcess =
                         (Debug.log "values" updatedValues)
                         |> argMax (\(Utility u) -> u)
                         |> Maybe.withDefault (Utility 0)
+
+                (Utility deltaUtility) =
+                    updatedDelta
             in
-            if delta < acceptableDelta then
+            if Debug.log "updatedDelta" deltaUtility < acceptableDelta && not justStarted then
                 Policy
                     (\_ state ->
                         updatedValues
@@ -372,9 +375,9 @@ valueIteration (Utility acceptableDelta) decisionProcess =
                     )
 
             else
-                valueIteration_ updatedValues updatedDelta
+                valueIteration_ updatedValues updatedDelta False
     in
-    valueIteration_ [] (Utility 0)
+    valueIteration_ [] (Utility 0) True
 
 
 {-| Policy iteration algorithm. Determines the optimal policy for a decision process. More exact but less efficient than `valueIteration`.

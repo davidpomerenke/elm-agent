@@ -1,3 +1,5 @@
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/davidpomerenke/elm-agent)
+
 # elm-agent 🤖💭
 
 Code lecture notes for _Foundations of Agents_ at the Uni Maastricht, winter semester 2020/21.

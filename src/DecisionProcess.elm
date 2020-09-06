@@ -2,9 +2,9 @@ module DecisionProcess exposing
     ( DecisionProcess, Probability(..), Utility(..), Discount(..)
     , Sequence, History, historyToSequence, Future, futureToSequence
     , expectedReward, utilityGivenFuture
-    , Policy(..), ahistoricPolicySpace, utilityGivenPolicy
+    , Policy(..)
     , utilityGivenValues, updateValues, valueIteration
-    , policyIteration
+    , utilityGivenPolicy, policyIteration
     )
 
 {-| Markov Decision Process.
@@ -31,7 +31,7 @@ The _Markov property_ needs to be fulfilled. This means: All relevant informatio
 
 # Policies
 
-@docs Policy, ahistoricPolicySpace, utilityGivenPolicy
+@docs Policy
 
 
 # Algorithms
@@ -44,7 +44,7 @@ The _Markov property_ needs to be fulfilled. This means: All relevant informatio
 
 ## Policy iteration
 
-@docs policyIteration
+@docs utilityGivenPolicy, policyIteration
 
 -}
 
@@ -139,31 +139,6 @@ futureToSequence currentState future =
             )
 
 
-{-| Policy: Defines an action (maybe) for each state.
--}
-type Policy state action
-    = Policy (Maybe (Sequence state action) -> state -> Maybe action)
-
-
-{-| Policy space of those policies that do only depend on the current state. Since the optimal policy does only depend on the current state, these are the candidate policies for the optimal policy.
--}
-ahistoricPolicySpace : DecisionProcess state action -> List (Policy state action)
-ahistoricPolicySpace decisionProcess =
-    decisionProcess.states
-        |> List.map (\state -> decisionProcess.actions state |> List.map (\action -> ( state, action )))
-        |> List.filter (\l -> List.length l > 0)
-        |> List.cartesianProduct
-        |> List.map
-            (\tuples ->
-                Policy
-                    (\_ state ->
-                        tuples
-                            |> List.find (\( state_, _ ) -> state_ == state)
-                            |> Maybe.map Tuple.second
-                    )
-            )
-
-
 {-| Helper function to maximize a list of arguments by some value derived from the arguments.
 
     argMax String.length [ "a", "bc", "def" ] == "def"
@@ -236,6 +211,12 @@ expectedReward state action decisionProcess =
                 Utility (u * t)
             )
         |> sumUtility
+
+
+{-| Policy: Defines an action (maybe) for each state.
+-}
+type Policy state action
+    = Policy (Maybe (Sequence state action) -> state -> Maybe action)
 
 
 {-| Utility given policy.
@@ -337,14 +318,14 @@ updateValues values decisionProcess =
                                         (Discount gamma) =
                                             decisionProcess.discount
 
-                                        (Utility futureUtility_) =
+                                        (Utility futureUtility) =
                                             utilityGivenValues state action values decisionProcess
                                     in
                                     ( action
                                     , Utility
                                         (e
                                             + gamma
-                                            * futureUtility_
+                                            * futureUtility
                                         )
                                     )
                                 )
@@ -394,8 +375,61 @@ valueIteration (Utility epsilon) decisionProcess =
     iterate Nothing
 
 
+
+-- Policy iteration
+
+
+updatePolicy : Policy state action -> DecisionProcess state action -> Policy state action
+updatePolicy (Policy old) ({ actions, discount } as decisionProcess) =
+    Policy
+        (\_ state ->
+            actions state
+                |> List.map
+                    (\action ->
+                        let
+                            (Utility e) =
+                                expectedReward state action decisionProcess
+
+                            (Discount gamma) =
+                                discount
+
+                            (Utility futureUtility) =
+                                utilityGivenPolicy state (Policy old) decisionProcess
+
+                            utility =
+                                e + gamma * futureUtility
+                        in
+                        ( action, utility )
+                    )
+                |> argMax (\( _, u ) -> u)
+                |> Maybe.map Tuple.first
+        )
+
+
 {-| Policy iteration algorithm. Determines the optimal policy for a decision process. More exact but less efficient than `valueIteration`.
+
+⚠️ Not tested
+
 -}
 policyIteration : DecisionProcess state action -> Policy state action
-policyIteration =
-    Debug.todo ""
+policyIteration ({ states } as decisionProcess) =
+    let
+        initialPolicy =
+            Policy (\_ _ -> Nothing)
+
+        iterate : Policy state action -> Policy state action
+        iterate (Policy policy) =
+            let
+                (Policy updatedPolicy) =
+                    updatePolicy (Policy policy) decisionProcess
+
+                unchanged =
+                    List.map (policy Nothing) states == List.map (updatedPolicy Nothing) states
+            in
+            if unchanged then
+                Policy updatedPolicy
+
+            else
+                iterate (Policy updatedPolicy)
+    in
+    iterate initialPolicy

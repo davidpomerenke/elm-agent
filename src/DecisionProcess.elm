@@ -3,7 +3,8 @@ module DecisionProcess exposing
     , Sequence, History, historyToSequence, Future, futureToSequence
     , expectedReward, utilityGivenFuture
     , Policy(..), ahistoricPolicySpace, utilityGivenPolicy
-    , valueIteration, policyIteration, optimalPolicy
+    , utilityGivenValues, updateValues, valueIteration
+    , policyIteration
     )
 
 {-| Markov Decision Process.
@@ -35,7 +36,15 @@ The _Markov property_ needs to be fulfilled. This means: All relevant informatio
 
 # Algorithms
 
-@docs valueIteration, policyIteration, optimalPolicy
+
+## Value iteration
+
+@docs utilityGivenValues, updateValues, valueIteration
+
+
+## Policy iteration
+
+@docs policyIteration
 
 -}
 
@@ -275,23 +284,6 @@ utilityGivenPolicy state (Policy policy) decisionProcess =
         )
 
 
-paretoOptimum : List ( a, List comparable ) -> Maybe ( a, List comparable )
-paretoOptimum listOfLists =
-    let
-        paretoBetter : List comparable -> List comparable -> Bool
-        paretoBetter l1 l2 =
-            List.zip l1 l2
-                |> List.all (\( a, b ) -> a > b)
-    in
-    List.find
-        (\( _, list ) ->
-            listOfLists
-                |> List.filter (\( _, l ) -> l /= list)
-                |> List.all (\( _, l ) -> paretoBetter list l)
-        )
-        listOfLists
-
-
 
 -- LECTURE 2
 
@@ -323,7 +315,7 @@ utilityGivenValues state action values decisionProcess =
         |> sumUtility
 
 
-{-| Perform a Bellman-update on the values. This is an iteration step in the `valueIteration` algorithm.
+{-| Perform a Bellman-update on the values. This is the main part of an iteration step in the `valueIteration` algorithm.
 -}
 updateValues :
     List ( state, action, Utility )
@@ -407,26 +399,3 @@ valueIteration (Utility epsilon) decisionProcess =
 policyIteration : DecisionProcess state action -> Policy state action
 policyIteration =
     Debug.todo ""
-
-
-{-| Optimal policy. Very inefficient and not stacksafe, use `valueIteration` or `policyIteration` instead.
--}
-optimalPolicy : DecisionProcess state action -> Maybe (Policy state action)
-optimalPolicy decisionProcess =
-    ahistoricPolicySpace decisionProcess
-        |> List.map
-            (\policy ->
-                ( policy
-                , decisionProcess.states
-                    |> List.map
-                        (\state ->
-                            let
-                                (Utility u) =
-                                    utilityGivenPolicy state policy decisionProcess
-                            in
-                            u
-                        )
-                )
-            )
-        |> paretoOptimum
-        |> Maybe.map Tuple.first

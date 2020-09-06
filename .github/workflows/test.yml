@@ -22,4 +22,6 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Test
-        run: npm test
+        run: |
+          npm install
+          npm test

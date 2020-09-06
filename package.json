@@ -6,6 +6,6 @@
     "elm-test": "^0.19.1-revision2"
   },
   "scripts": {
-    "test": "npm run elm-test"
+    "test": "elm-test"
   }
 }

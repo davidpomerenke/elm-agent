@@ -9,4 +9,7 @@ import Test exposing (..)
 
 suite : Test
 suite =
-    skip <| describe "syllabus exercises" []
+    describe "syllabus exercises" [
+        test "nothing yet" <| 
+            \_ -> Expect.pass
+    ]

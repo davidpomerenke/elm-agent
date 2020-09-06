@@ -1,5 +1,6 @@
 # elm-agent 🤖💭
 
+[![Github actions elm-test status](https://github.com/davidpomerenke/elm-agent/workflows/elm-test/badge.svg)](https://github.com/davidpomerenke/elm-agent/actions?query=workflow%3Aelm-test)
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/davidpomerenke/elm-agent)
 
 Code lecture notes for _Foundations of Agents_ at the Uni Maastricht, winter semester 2020/21.
@@ -13,22 +14,13 @@ Elm is a nice programming language that you haven't heard of before, so you're l
 Elm has two advantages for using it for lecture notes:
 
 1. It is easy to learn and easy to use, because it has a friendly compiler and a friendly community.
-2. Its structure forces you to avoid mistakes. This has the effect that there can be no runtime error. More importantly, it enables you to focus on the logic.
-
-✔️ type checking (the good part of Java)
-
-❌ side effects (the bad part of Java)
-
-✔️ pattern matching and functional programming (the good part of Haskell)
-
-❌ complicated concepts or syntax (the bad part of Haskell)
-
-Elm runs in the browser, which comes with advantages and disadvantages. Tests (= the main use case with lecture notes) also run in the command line.
+2. It forces you to avoid mistakes. This has the effect that there can be no runtime error. More importantly, it enables you to focus on the logic.
 
 ## Consider contributing? 👯
 
 It would be great to work together at this!
 
+- You can edit the code online [on Gitpod](https://gitpod.io/#https://github.com/davidpomerenke/elm-agent), or just clone the repository.
 - If you have an addition or an uncontroversial improvement, just make a pull request!
 - For anything else, don't hesitate to open an issue for discussion.
 - If you like, I can add you to the list of contributors.
@@ -43,9 +35,9 @@ Read the documentation, and, more importantly, have a look at the examples in th
 
 ### Run the tests 👨‍💻
 
-- [Install Elm](https://guide.elm-lang.org/install/elm.html)
-- Install elm-test: `npm install -g elm-test`
-- Run `elm-test` from the root directory of this repository.
+`npm install`
+
+`npm test` (which calls _elm-test_)
 
 ### Use it in your Elm application 🎆
 

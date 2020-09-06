@@ -109,7 +109,10 @@ type alias Future state action =
 
 {-| Convert List of (s, a) to List of (s, a, s'), ending with the current state.
 -}
-historyToSequence : state -> History state action -> Maybe (Sequence state action)
+historyToSequence :
+    state
+    -> History state action
+    -> Maybe (Sequence state action)
 historyToSequence currentState history =
     List.unconsLast history
         |> Maybe.map
@@ -125,7 +128,10 @@ historyToSequence currentState history =
 
 {-| Convert List of (a, s') to List of (s, a, s'), starting with the current state.
 -}
-futureToSequence : state -> Future state action -> Maybe (Sequence state action)
+futureToSequence :
+    state
+    -> Future state action
+    -> Maybe (Sequence state action)
 futureToSequence currentState future =
     List.uncons future
         |> Maybe.map
@@ -169,18 +175,25 @@ argMax f =
 -}
 sumUtility : List Utility -> Utility
 sumUtility =
-    List.foldl (\(Utility u) (Utility us) -> Utility (us + u)) (Utility 0)
+    List.foldl
+        (\(Utility u) (Utility us) -> Utility (us + u))
+        (Utility 0)
 
 
 {-| Utility of the current state given the future actions and states.
 -}
-utilityGivenFuture : Sequence state action -> DecisionProcess state action -> Utility
+utilityGivenFuture :
+    Sequence state action
+    -> DecisionProcess state action
+    -> Utility
 utilityGivenFuture future decisionProcess =
     let
         rewards : List Utility
         rewards =
             List.map
-                (\( state1, action, state2 ) -> decisionProcess.reward state1 action state2)
+                (\( state1, action, state2 ) ->
+                    decisionProcess.reward state1 action state2
+                )
                 future
 
         (Discount gamma) =
@@ -196,7 +209,11 @@ utilityGivenFuture future decisionProcess =
 
 {-| Expected reward given a state and an action.
 -}
-expectedReward : state -> action -> DecisionProcess state action -> Utility
+expectedReward :
+    state
+    -> action
+    -> DecisionProcess state action
+    -> Utility
 expectedReward state action decisionProcess =
     decisionProcess.states
         |> List.map
@@ -216,14 +233,22 @@ expectedReward state action decisionProcess =
 {-| Policy: Defines an action (maybe) for each state.
 -}
 type Policy state action
-    = Policy (Maybe (Sequence state action) -> state -> Maybe action)
+    = Policy
+        (Maybe (Sequence state action)
+         -> state
+         -> Maybe action
+        )
 
 
 {-| Utility given policy.
 _Warning:_ This is not stacksafe and will likely crash.
 -}
-utilityGivenPolicy : state -> Policy state action -> DecisionProcess state action -> Utility
-utilityGivenPolicy state (Policy policy) decisionProcess =
+utilityGivenPolicy :
+    state
+    -> Policy state action
+    -> DecisionProcess state action
+    -> Utility
+utilityGivenPolicy state (Policy policy) ({ transition, states, discount } as decisionProcess) =
     let
         action =
             policy Nothing state
@@ -234,19 +259,22 @@ utilityGivenPolicy state (Policy policy) decisionProcess =
                 |> Maybe.withDefault (Utility 0)
 
         (Utility expectedFutureUtility) =
-            decisionProcess.states
+            states
                 |> List.map
                     (\state2 ->
                         let
                             (Probability t) =
                                 action
-                                    |> Maybe.map (\a -> decisionProcess.transition state a state2)
+                                    |> Maybe.map (\a -> transition state a state2)
                                     |> Maybe.withDefault (Probability 0)
                         in
                         if t > 0 then
                             let
                                 (Utility u) =
-                                    utilityGivenPolicy state2 (Policy policy) decisionProcess
+                                    utilityGivenPolicy
+                                        state2
+                                        (Policy policy)
+                                        decisionProcess
                             in
                             Utility (t * u)
 
@@ -256,7 +284,7 @@ utilityGivenPolicy state (Policy policy) decisionProcess =
                 |> sumUtility
 
         (Discount gamma) =
-            decisionProcess.discount
+            discount
     in
     Utility
         (expectedUtility
@@ -319,7 +347,11 @@ updateValues values decisionProcess =
                                             decisionProcess.discount
 
                                         (Utility futureUtility) =
-                                            utilityGivenValues state action values decisionProcess
+                                            utilityGivenValues
+                                                state
+                                                action
+                                                values
+                                                decisionProcess
                                     in
                                     ( action
                                     , Utility
@@ -331,28 +363,39 @@ updateValues values decisionProcess =
                                 )
                             |> argMax (\( _, Utility u ) -> u)
                 in
-                Maybe.map (\( action, utility ) -> ( state, action, utility )) optimalActionAndUtility
+                Maybe.map
+                    (\( action, utility ) -> ( state, action, utility ))
+                    optimalActionAndUtility
             )
         |> Maybe.values
 
 
 {-| Value iteration algorithm. Approximates the optimal policy of a decision process. The algorithm stops iterating once the highest utility improvement for any state has dropped below a specified utility difference epsilon.
 -}
-valueIteration : Utility -> DecisionProcess state action -> Policy state action
+valueIteration :
+    Utility
+    -> DecisionProcess state action
+    -> Policy state action
 valueIteration (Utility epsilon) decisionProcess =
     let
-        iterate : Maybe (List ( state, action, Utility )) -> Policy state action
+        iterate :
+            Maybe (List ( state, action, Utility ))
+            -> Policy state action
         iterate values =
             let
                 updatedValues =
-                    updateValues (Maybe.withDefault [] values) decisionProcess
+                    updateValues
+                        (Maybe.withDefault [] values)
+                        decisionProcess
 
                 stop =
                     values
                         |> Maybe.map
                             (\values_ ->
                                 List.map2
-                                    (\( _, _, Utility u1 ) ( _, _, Utility u2 ) -> u2 - u1)
+                                    (\( _, _, Utility u1 ) ( _, _, Utility u2 ) ->
+                                        u2 - u1
+                                    )
                                     values_
                                     updatedValues
                                     |> argMax identity
@@ -379,7 +422,10 @@ valueIteration (Utility epsilon) decisionProcess =
 -- Policy iteration
 
 
-updatePolicy : Policy state action -> DecisionProcess state action -> Policy state action
+updatePolicy :
+    Policy state action
+    -> DecisionProcess state action
+    -> Policy state action
 updatePolicy (Policy old) ({ actions, discount } as decisionProcess) =
     Policy
         (\_ state ->
@@ -424,7 +470,8 @@ policyIteration ({ states } as decisionProcess) =
                     updatePolicy (Policy policy) decisionProcess
 
                 unchanged =
-                    List.map (policy Nothing) states == List.map (updatedPolicy Nothing) states
+                    List.map (policy Nothing) states
+                        == List.map (updatedPolicy Nothing) states
             in
             if unchanged then
                 Policy updatedPolicy

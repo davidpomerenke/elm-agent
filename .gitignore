@@ -1,4 +1,5 @@
 weirdstuff/
+package.lock
 
 # elm-package generated files
 elm-stuff

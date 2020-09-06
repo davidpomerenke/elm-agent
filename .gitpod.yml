@@ -1,2 +1,6 @@
 tasks:
   - init: npm install --global elm elm-format elm-test
+
+vscode:
+  extensions:
+    - elmTooling.elm-ls-vscode@1.3.0:by5CTq41RDoPyf1ZZ4kXxg==

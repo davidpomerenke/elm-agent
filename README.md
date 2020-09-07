@@ -4,7 +4,7 @@ Code lecture notes for _Foundations of Agents_ at the Uni Maastricht, winter sem
 
 ## Want to understand the code? 🤓
 
-Read the [documentation](https://elm-doc-preview.netlify.app/?repo=davidpomerenke/elm-agent&version=main), and have a look at the examples in the [`tests/Test/Examples`](tests/Test/Examples/) folder! Feel free to start an issue to ask for clarifications.
+Read the [documentation](https://elm-doc-preview.netlify.app/DecisionProcess?repo=davidpomerenke%2Felm-agent&version=main), and have a look at the examples in the [`tests/Test/Examples`](tests/Test/Examples/) folder! Feel free to start an issue to ask for clarifications.
 
 ## What's Elm? 😮
 
